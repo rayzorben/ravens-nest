@@ -38,6 +38,13 @@
               <span class="nav-meta" id="doctor-badge">Checking D1–D13...</span>
             </div>
           </button>
+          <button type="button" class="nav-item" id="nav-upstream">
+            <span class="nav-icon">⟳</span>
+            <div class="nav-item-body">
+              <span class="nav-title">Raven Upstream</span>
+              <span class="nav-meta" id="upstream-badge">Checking GitHub...</span>
+            </div>
+          </button>
           <button type="button" class="nav-item" id="nav-processes">
             <span class="nav-icon">▶</span>
             <div class="nav-item-body">
@@ -99,6 +106,9 @@
           </button>
         </div>
       </header>
+
+      <!-- Upstream update offer (shown on every view when GitHub has new commits or containers are outdated) -->
+      <div id="upstream-update-banner" class="update-banner hidden"></div>
 
       <!-- Container View -->
       <section id="view-container" class="content-pane">
@@ -250,6 +260,42 @@
           </div>
           <div id="doctor-cmake-banner" class="cmake-banner"></div>
           <div id="doctor-components-grid" class="doctor-grid"></div>
+        </div>
+      </section>
+
+      <!-- Raven Upstream (GitHub clone/pull, build & container rebuild) View -->
+      <section id="view-upstream" class="content-pane hidden">
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <div>
+              <h3>Raven Upstream: Clone, Build &amp; Rebuild Containers</h3>
+              <p class="muted" id="upstream-remote-label">Tracks the configured GitHub repository and branch for new commits.</p>
+            </div>
+            <div class="header-btn-group">
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-upstream-check">Check GitHub Now</button>
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-upstream-build-only">Pull &amp; Build Only</button>
+              <button type="button" class="btn btn-sm btn-accent" id="btn-upstream-build-all">Pull, Build &amp; Rebuild All</button>
+            </div>
+          </div>
+          <div id="upstream-summary-cards" class="summary-grid"></div>
+          <div id="upstream-incoming" class="cmake-banner"></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <div>
+              <h3>Containers by Raven Version</h3>
+              <p class="muted">Rebuilding re-deploys runtime libraries, runs <code>raven --reboot</code>, and records the Raven commit, with safety snapshots before and after.</p>
+            </div>
+            <div class="header-btn-group">
+              <button type="button" class="btn btn-sm btn-accent" id="btn-upstream-rebuild-all">Rebuild All Containers</button>
+            </div>
+          </div>
+          <table class="dep-table">
+            <thead>
+              <tr><th>Container</th><th>Raven Commit</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody id="upstream-containers-body"></tbody>
+          </table>
         </div>
       </section>
 

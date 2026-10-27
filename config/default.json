@@ -27,7 +27,47 @@
     "installer64_dir": "{build_dir}/installer-x64",
     "installer32_dir": "{build_dir}/installer-x86",
     "graphics_dir": "{build_dir}/graphics",
-    "testdata_dir": "{build_dir}/testdata"
+    "testdata_dir": "{build_dir}/testdata",
+    "build_stamp_file": "{build_dir}/raven-build-stamp.json",
+    "appimage_output_dir": "{ui_dir}/dist",
+    "appimage_appdir": "{appimage_output_dir}/AppDir",
+    "appimage_tools_dir": "{appimage_output_dir}/tools"
+  },
+  "upstream": {
+    "remote_url": "https://github.com/mirkobrombin/raven.git",
+    "branch": "main",
+    "auto_check_enabled": true,
+    "check_interval_sec": 60,
+    "fetch_timeout_sec": 15,
+    "build_jobs": 4,
+    "cmake_build_targets": [
+      "raven",
+      "root_certificates",
+      "installer_components_64",
+      "installer_components_32",
+      "graphics_components",
+      "d3dcompiler_component",
+      "x86_ucrt_component"
+    ],
+    "auto_snapshot_before_container_rebuild": true,
+    "auto_snapshot_after_container_rebuild": true
+  },
+  "packaging": {
+    "app_id": "io.github.rayzorben.RavenNest",
+    "app_name": "Raven Nest",
+    "binary_name": "raven-ui",
+    "appimage_name": "Raven_Nest-x86_64.AppImage",
+    "appimage_arch": "x86_64",
+    "appimagetool_url": "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage",
+    "categories": "System;Emulator;",
+    "comment": "Windows Application Sandbox & Deployment Manager for Raven",
+    "icon_name": "raven-nest",
+    "icon_source": "static/logo.svg",
+    "install_subdir": "usr/lib/raven-nest",
+    "bundle_files": ["raven-ui", "backend.py", "LICENSE", "README.md"],
+    "bundle_dirs": ["services", "static", "config"],
+    "bundle_exclude_names": ["__pycache__"],
+    "bundle_exclude_suffixes": [".pyc", ".pyo"]
   },
   "ui": {
     "title": "Raven Nest",

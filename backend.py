@@ -24,6 +24,7 @@ from services.container_service import ContainerService
 from services.dependency_service import DependencyService
 from services.doctor_service import DoctorService
 from services.process_service import ProcessService
+from services.upstream_service import UpstreamService
 from services.version_snapshot_service import VersionSnapshotService
 
 UI_DIR = Path(__file__).resolve().parent
@@ -35,6 +36,7 @@ DEP_SVC = DependencyService(CFG)
 CONTAINER_SVC = ContainerService(CFG, DEP_SVC, VER_SVC)
 DOCTOR_SVC = DoctorService(CFG)
 PROC_SVC = ProcessService(CFG, CONTAINER_SVC, DEP_SVC, DOCTOR_SVC)
+UPSTREAM_SVC = UpstreamService(CFG, CONTAINER_SVC, DEP_SVC, VER_SVC, DOCTOR_SVC, PROC_SVC)
 
 
 class RavenAPIHandler(http.server.SimpleHTTPRequestHandler):
@@ -85,6 +87,12 @@ class RavenAPIHandler(http.server.SimpleHTTPRequestHandler):
 
         if path == "/api/config":
             self.send_json(CFG.export_client_config())
+            return
+
+        # Upstream GitHub tracking (fetch is cached for `upstream.check_interval_sec`)
+        if path == "/api/upstream/status":
+            force = query.get("force", ["0"])[0] in ("1", "true")
+            self.send_json(UPSTREAM_SVC.get_status(force_remote=force))
             return
 
         if path == "/api/inspect":
@@ -292,6 +300,18 @@ class RavenAPIHandler(http.server.SimpleHTTPRequestHandler):
                 body.get("desktop", "wayland"),
                 body.get("args", ""),
             ))
+            return
+
+        # Upstream clone/pull → build → container rebuild pipeline (tracked background job)
+        if path == "/api/upstream/sync":
+            self.send_json(UPSTREAM_SVC.start_pipeline_job(body))
+            return
+
+        if path == "/api/upstream/rebuild":
+            self.send_json(UPSTREAM_SVC.start_pipeline_job({
+                "sync_mode": "rebuild_only",
+                "rebuild_target": body.get("target", "all"),
+            }))
             return
 
         if path == "/api/doctor/repair":

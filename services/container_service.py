@@ -182,6 +182,7 @@ class ContainerService:
             "registry_size_kb": round(reg_file.stat().st_size / 1024, 1) if reg_file.exists() else 0,
             "registry_hash": reg_hash,
             "current_version": current_version,
+            "raven_version": meta.get("raven_version"),
             "com_registered": registered_marker.exists() and registered_marker.stat().st_size > 0,
             "sys32_count": len(sys32_files),
             "syswow64_count": len(syswow64_files),

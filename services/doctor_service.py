@@ -50,6 +50,38 @@ class DoctorService:
             "cmake_font_hashes": combined,
         }
 
+    def cmake_configure_args(self, font_hashes: str | None = None) -> list[str]:
+        """Single authoritative CMake configure argv (shared by doctor, repair, and upstream builds)."""
+        if font_hashes is None:
+            font_hashes = self.get_host_font_hashes()["cmake_font_hashes"]
+        p = self.cfg.path
+        return [
+            "cmake",
+            "-S", str(p("repo_root")),
+            "-B", str(p("build_dir")),
+            f"-DRAVEN_INSTALLER_COMPONENT_DIR={p('installer64_dir')}",
+            f"-DRAVEN_INSTALLER32_COMPONENT_DIR={p('installer32_dir')}",
+            f"-DRAVEN_CONTROLS_COMPONENT_DIR={p('controls64_dir')}",
+            f"-DRAVEN_CONTROLS32_COMPONENT_DIR={p('controls32_dir')}",
+            f"-DRAVEN_RTL_COMPONENT_PATH={p('rtl_component_path')}",
+            f"-DRAVEN_TEXT_COMPONENT_PATH={p('text_component_path')}",
+            f"-DRAVEN_ROOT_CERTIFICATE_DIRECTORY={p('roots_dir')}",
+            f"-DRAVEN_SKIA_SOURCE={p('skia_source_dir')}",
+            f"-DRAVEN_SKIA_LIBRARY={p('skia_library_path')}",
+            f"-DRAVEN_FONT_DIRECTORY={p('fonts_dir')}",
+            f"-DFONT_HASHES={font_hashes}",
+            f"-DRAVEN_DXVK_PE64_DIR={p('graphics_dir') / 'dxvk/pe64'}",
+            f"-DRAVEN_DXVK_PE32_DIR={p('graphics_dir') / 'dxvk/pe32'}",
+            f"-DRAVEN_VKD3D_PE64_DIR={p('graphics_dir') / 'vkd3d-proton/pe64'}",
+        ]
+
+    def cmake_build_args(self) -> list[str]:
+        """CMake build argv for the configured Raven runtime targets (`upstream.cmake_build_targets`)."""
+        up = self.cfg.data.get("upstream", {})
+        jobs = int(up.get("build_jobs", 4))
+        targets = up.get("cmake_build_targets", ["raven"])
+        return ["cmake", "--build", str(self.cfg.path("build_dir")), f"-j{jobs}", "--target", *targets]
+
     def evaluate(self) -> dict[str, Any]:
         cache = self.parse_cmake_cache()
         fonts = self.get_host_font_hashes()
@@ -103,25 +135,7 @@ class DoctorService:
             })
 
         font_hash_arg = fonts["cmake_font_hashes"] or cached_font_hashes
-        cmake_configure_cmd = " ".join([
-            "cmake",
-            "-S", shlex.quote(str(repo_root)),
-            "-B", shlex.quote(str(build_dir)),
-            f"-DRAVEN_INSTALLER_COMPONENT_DIR={shlex.quote(str(self.cfg.path('installer64_dir')))}",
-            f"-DRAVEN_INSTALLER32_COMPONENT_DIR={shlex.quote(str(self.cfg.path('installer32_dir')))}",
-            f"-DRAVEN_CONTROLS_COMPONENT_DIR={shlex.quote(str(self.cfg.path('controls64_dir')))}",
-            f"-DRAVEN_CONTROLS32_COMPONENT_DIR={shlex.quote(str(self.cfg.path('controls32_dir')))}",
-            f"-DRAVEN_RTL_COMPONENT_PATH={shlex.quote(str(self.cfg.path('rtl_component_path')))}",
-            f"-DRAVEN_TEXT_COMPONENT_PATH={shlex.quote(str(self.cfg.path('text_component_path')))}",
-            f"-DRAVEN_ROOT_CERTIFICATE_DIRECTORY={shlex.quote(str(self.cfg.path('roots_dir')))}",
-            f"-DRAVEN_SKIA_SOURCE={shlex.quote(str(self.cfg.path('skia_source_dir')))}",
-            f"-DRAVEN_SKIA_LIBRARY={shlex.quote(str(self.cfg.path('skia_library_path')))}",
-            f"-DRAVEN_FONT_DIRECTORY={shlex.quote(str(self.cfg.path('fonts_dir')))}",
-            f"-DFONT_HASHES={shlex.quote(font_hash_arg)}",
-            f"-DRAVEN_DXVK_PE64_DIR={shlex.quote(str(self.cfg.path('graphics_dir') / 'dxvk/pe64'))}",
-            f"-DRAVEN_DXVK_PE32_DIR={shlex.quote(str(self.cfg.path('graphics_dir') / 'dxvk/pe32'))}",
-            f"-DRAVEN_VKD3D_PE64_DIR={shlex.quote(str(self.cfg.path('graphics_dir') / 'vkd3d-proton/pe64'))}",
-        ])
+        cmake_configure_cmd = " ".join(shlex.quote(a) for a in self.cmake_configure_args(font_hash_arg))
 
         return {
             "summary": {

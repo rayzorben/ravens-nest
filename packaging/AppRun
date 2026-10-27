@@ -1,0 +1,28 @@
+#!/bin/sh
+# Raven Nest AppImage entry point.
+# Uses the native GTK/WebKit2GTK window when the host provides WebKitGTK 4.1;
+# otherwise serves the same UI from backend.py and opens it in the default browser.
+HERE="$(dirname "$(readlink -f "$0")")"
+APP="$HERE/@INSTALL_SUBDIR@"
+export PYTHONDONTWRITEBYTECODE=1
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "Raven Nest requires python3 (3.10+) on the host." >&2
+    exit 1
+fi
+
+if ! ldd "$APP/@BINARY_NAME@" 2>/dev/null | grep -q "not found"; then
+    exec "$APP/@BINARY_NAME@" "$@"
+fi
+
+echo "WebKitGTK 4.1 not found on host; opening Raven Nest in your browser instead." >&2
+URL="$(python3 -c "import sys; sys.path.insert(0, sys.argv[1]); from pathlib import Path; from services.config_service import ConfigService; import os; s = ConfigService(Path(sys.argv[1])).data['server']; print('http://%s:%s' % (os.environ.get('RAVEN_UI_HOST', s['host']), os.environ.get('RAVEN_UI_PORT', s['port'])))" "$APP")"
+python3 "$APP/backend.py" &
+BACKEND=$!
+trap 'kill $BACKEND 2>/dev/null' INT TERM EXIT
+for _ in $(seq 1 50); do
+    python3 -c "import sys, urllib.request; urllib.request.urlopen(sys.argv[1], timeout=1)" "$URL" 2>/dev/null && break
+    sleep 0.1
+done
+xdg-open "$URL" >/dev/null 2>&1 || echo "Open $URL in your browser." >&2
+wait $BACKEND

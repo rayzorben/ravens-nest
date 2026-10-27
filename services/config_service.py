@@ -59,7 +59,7 @@ def write_json_idempotent(path: Path, data: Any) -> bool:
 class ConfigService:
     """
     Single-responsibility configuration service ("Everything as Config").
-    Loads defaults from `ui/config/default.json`, merges user overrides from
+    Loads defaults from `config/default.json`, merges user overrides from
     `~/.config/raven-nest/config.json`, and resolves all template variables.
     """
 
@@ -99,6 +99,7 @@ class ConfigService:
     def _resolve_paths(self) -> None:
         tokens: dict[str, str] = {
             "auto_repo_root": str(self.repo_root),
+            "ui_dir": str(self.ui_dir),
             "home": str(Path.home()),
         }
         raw_paths = self._merged.get("paths", {})
@@ -110,7 +111,9 @@ class ConfigService:
                 except KeyError:
                     pass
         self._tokens = tokens
-        self._resolved_paths = {k: Path(v) for k, v in tokens.items() if k != "auto_repo_root"}
+        self._resolved_paths = {
+            k: Path(v) for k, v in tokens.items() if k not in ("auto_repo_root", "ui_dir")
+        }
 
     def expand(self, template: str) -> str:
         """Expands `{repo_root}`, `{build_dir}`, `{native_dir}`, `{home}`, etc."""
@@ -150,6 +153,8 @@ class ConfigService:
         return {
             "server": self._merged["server"],
             "ui": self._merged["ui"],
+            "upstream": self._merged.get("upstream", {}),
+            "packaging": self._merged.get("packaging", {}),
             "paths": {k: str(v) for k, v in self._resolved_paths.items()},
             "desktop_backends": self._merged["desktop_backends"],
             "blueprints": self._merged["blueprints"],

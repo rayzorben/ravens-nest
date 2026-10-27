@@ -714,6 +714,44 @@ code, pre, .mono {
   gap: 8px;
 }
 
+.update-banner {
+  margin: 14px 24px 0;
+  background: var(--status-warn-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.update-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.update-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.commit-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+}
+
+.commit-list code {
+  margin-right: 6px;
+}
+
 .cmd-box {
   background: var(--bg-code);
   border: 1px solid var(--border-subtle);

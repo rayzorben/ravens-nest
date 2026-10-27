@@ -202,13 +202,10 @@ class ProcessService:
                 rec["logs"].append("[raven-ui] Process terminated by user.")
         return {"ok": True}
 
-    def run_doctor_repair(self, action: str) -> dict[str, Any]:
+    def repair_commands(self) -> dict[str, list[str]]:
+        """Maps each doctor `repair_action` to its argv (shared by the UI repair buttons and upstream builds)."""
         repo_root = self.cfg.path("repo_root")
-        build_dir = self.cfg.path("build_dir")
-        fonts = self.doctor.get_host_font_hashes()
-        font_hash_arg = fonts["cmake_font_hashes"]
-
-        commands: dict[str, list[str]] = {
+        return {
             "provision_controls_64": ["python3", str(repo_root / "scripts/provision-controls.py"), "--output", str(self.cfg.path("controls64_dir"))],
             "provision_controls_32": [
                 "python3", str(repo_root / "scripts/provision-controls.py"),
@@ -230,30 +227,13 @@ class ProcessService:
                 f"python3 {shlex.quote(str(repo_root / 'scripts/provision-roots.py'))} --output {shlex.quote(str(self.cfg.path('roots_dir')))}",
             ],
             "provision_graphics": ["python3", str(repo_root / "scripts/provision-graphics.py"), "--destination", str(self.cfg.path("graphics_dir"))],
-            "reconfigure_cmake": [
-                "cmake", "-S", str(repo_root), "-B", str(build_dir),
-                f"-DRAVEN_INSTALLER_COMPONENT_DIR={self.cfg.path('installer64_dir')}",
-                f"-DRAVEN_INSTALLER32_COMPONENT_DIR={self.cfg.path('installer32_dir')}",
-                f"-DRAVEN_CONTROLS_COMPONENT_DIR={self.cfg.path('controls64_dir')}",
-                f"-DRAVEN_CONTROLS32_COMPONENT_DIR={self.cfg.path('controls32_dir')}",
-                f"-DRAVEN_RTL_COMPONENT_PATH={self.cfg.path('rtl_component_path')}",
-                f"-DRAVEN_TEXT_COMPONENT_PATH={self.cfg.path('text_component_path')}",
-                f"-DRAVEN_ROOT_CERTIFICATE_DIRECTORY={self.cfg.path('roots_dir')}",
-                f"-DRAVEN_SKIA_SOURCE={self.cfg.path('skia_source_dir')}",
-                f"-DRAVEN_SKIA_LIBRARY={self.cfg.path('skia_library_path')}",
-                f"-DRAVEN_FONT_DIRECTORY={self.cfg.path('fonts_dir')}",
-                f"-DFONT_HASHES={font_hash_arg}",
-                f"-DRAVEN_DXVK_PE64_DIR={self.cfg.path('graphics_dir') / 'dxvk/pe64'}",
-                f"-DRAVEN_DXVK_PE32_DIR={self.cfg.path('graphics_dir') / 'dxvk/pe32'}",
-                f"-DRAVEN_VKD3D_PE64_DIR={self.cfg.path('graphics_dir') / 'vkd3d-proton/pe64'}",
-            ],
-            "build_runtime": [
-                "cmake", "--build", str(build_dir), "-j4", "--target",
-                "raven", "root_certificates", "installer_components_64",
-                "installer_components_32", "graphics_components",
-                "d3dcompiler_component", "x86_ucrt_component",
-            ],
+            "reconfigure_cmake": self.doctor.cmake_configure_args(),
+            "build_runtime": self.doctor.cmake_build_args(),
         }
+
+    def run_doctor_repair(self, action: str) -> dict[str, Any]:
+        repo_root = self.cfg.path("repo_root")
+        commands = self.repair_commands()
         if action not in commands:
             return {"ok": False, "error": f"Unknown repair action: {action}"}
 

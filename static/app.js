@@ -4,9 +4,10 @@ const state = {
   trash: [],
   doctor: null,
   processes: [],
+  upstream: null,
   sampleApps: [],
   selectedPrefixId: null,
-  activeMainView: "container", // "container" | "doctor" | "processes" | "trash" | "config"
+  activeMainView: "container", // "container" | "upstream" | "doctor" | "processes" | "trash" | "config"
   activeTab: "tab-programs",
   inspectedData: null,
   pickerCallback: null,
@@ -101,8 +102,12 @@ async function refreshState() {
   state.prefixes = data.prefixes || [];
   state.trash = data.trash || [];
   state.doctor = data.doctor || null;
+  const prevRunning = state.processes.filter((p) => p.status === "running").length;
   state.processes = data.processes || [];
   state.sampleApps = data.sample_apps || [];
+  if (state.upstream && state.processes.filter((p) => p.status === "running").length < prevRunning) {
+    refreshUpstream();
+  }
 
   if (firstLoad && state.config) {
     populateConfigSelects(state.config);
@@ -151,6 +156,7 @@ function renderSidebar() {
     list.appendChild(btn);
   }
 
+  document.getElementById("nav-upstream").classList.toggle("active", state.activeMainView === "upstream");
   document.getElementById("nav-doctor").classList.toggle("active", state.activeMainView === "doctor");
   document.getElementById("nav-processes").classList.toggle("active", state.activeMainView === "processes");
   document.getElementById("nav-trash").classList.toggle("active", state.activeMainView === "trash");
@@ -171,7 +177,7 @@ function renderSidebar() {
 }
 
 function renderMainView() {
-  const views = ["container", "doctor", "processes", "trash", "config"];
+  const views = ["container", "upstream", "doctor", "processes", "trash", "config"];
   for (const v of views) {
     document.getElementById(`view-${v}`).classList.toggle("hidden", state.activeMainView !== v);
   }
@@ -180,6 +186,15 @@ function renderMainView() {
   verBadge.classList.toggle("hidden", state.activeMainView !== "container");
 
   const badge = document.getElementById("view-badge");
+
+  if (state.activeMainView === "upstream") {
+    document.getElementById("view-title").textContent = "Raven Upstream & Container Rebuilds";
+    const up = state.upstream;
+    badge.className = `badge ${up && !up.update_available ? "ok" : "warn"}`;
+    badge.textContent = !up ? "Checking..." : up.update_available ? "Update Available" : "Up to Date";
+    renderUpstreamView();
+    return;
+  }
 
   if (state.activeMainView === "doctor") {
     document.getElementById("view-title").textContent = "Deployment & Provisioning Doctor";
@@ -576,6 +591,178 @@ function renderInspectorResults(data) {
   `;
 }
 
+// ---------------------------------------------------------------------------
+// Raven Upstream: GitHub commit tracking, clone/pull + build, container rebuilds
+// ---------------------------------------------------------------------------
+
+const UPSTREAM_DISMISS_KEY = "raven-upstream-dismissed";
+
+function upstreamDismissKey(up) {
+  return `${up.target_sha}:${up.outdated_containers_count}:${up.needs_runtime_build}`;
+}
+
+async function refreshUpstream(force = false) {
+  try {
+    state.upstream = await apiGet(`/api/upstream/status${force ? "?force=1" : ""}`);
+  } catch (err) {
+    return;
+  }
+  renderUpstreamBadge();
+  renderUpstreamBanner();
+  if (state.activeMainView === "upstream") renderMainView();
+}
+
+async function startUpstreamJob(path, body, message) {
+  showToast(message);
+  const res = await apiPost(path, body);
+  if (!res.ok) {
+    showToast(res.error || "Failed to start upstream job");
+    return;
+  }
+  state.activeMainView = "processes";
+  await refreshState();
+}
+
+function startUpstreamPipeline(rebuildTarget) {
+  const cloned = state.upstream?.local?.cloned;
+  const what = rebuildTarget === "none" ? "" : rebuildTarget === "all" ? " and rebuilding all containers" : ` and rebuilding '${rebuildTarget}'`;
+  return startUpstreamJob(
+    "/api/upstream/sync",
+    { sync_mode: cloned ? "pull" : "clone", rebuild_target: rebuildTarget },
+    `${cloned ? "Pulling" : "Cloning"} Raven from GitHub, building${what}...`,
+  );
+}
+
+function rebuildContainers(target) {
+  return startUpstreamJob(
+    "/api/upstream/rebuild",
+    { target },
+    target === "all" ? "Rebuilding all containers with the current Raven build..." : `Rebuilding '${target}'...`,
+  );
+}
+
+function renderUpstreamBadge() {
+  const up = state.upstream;
+  const el = document.getElementById("upstream-badge");
+  if (!up) return;
+  if (!up.local.cloned) el.textContent = "Not cloned";
+  else if (up.has_remote_updates) el.textContent = `${up.remote.commits_behind} new commit${up.remote.commits_behind === 1 ? "" : "s"}`;
+  else if (up.outdated_containers_count > 0) el.textContent = `${up.outdated_containers_count} container${up.outdated_containers_count === 1 ? "" : "s"} outdated`;
+  else el.textContent = `#${up.build.short_sha || up.local.short_sha} • up to date`;
+}
+
+function renderUpstreamBanner() {
+  const up = state.upstream;
+  const banner = document.getElementById("upstream-update-banner");
+  let dismissed = null;
+  try {
+    dismissed = localStorage.getItem(UPSTREAM_DISMISS_KEY);
+  } catch (err) {
+    dismissed = null;
+  }
+  const show = up && up.update_available && dismissed !== upstreamDismissKey(up);
+  banner.classList.toggle("hidden", !show);
+  if (!show) return;
+
+  // A fresh pull/build is only needed when GitHub is ahead or the checkout is unbuilt;
+  // otherwise only the containers lag behind the existing build.
+  const needsBuild = !up.local.cloned || up.has_remote_updates || up.needs_runtime_build;
+  const n = up.outdated_containers_count;
+  banner.innerHTML = `
+    <div class="update-banner-text">
+      <strong>⟳ Raven update available</strong>
+      <span class="muted">${escapeHtml(up.headline)}</span>
+    </div>
+    <div class="update-banner-actions">
+      <button type="button" class="btn btn-sm btn-secondary" data-act="review">Review</button>
+      ${needsBuild ? `<button type="button" class="btn btn-sm btn-secondary" data-act="build">${up.local.cloned ? "Pull" : "Clone"} &amp; Build</button>` : ""}
+      ${n > 0 || needsBuild ? `<button type="button" class="btn btn-sm btn-accent" data-act="all">${needsBuild ? "Build &amp; " : ""}Rebuild All (${up.total_containers_count})</button>` : ""}
+      <button type="button" class="btn btn-sm btn-secondary" data-act="dismiss" title="Hide until something new arrives">✕</button>
+    </div>
+  `;
+  banner.querySelector('[data-act="review"]').addEventListener("click", () => {
+    state.activeMainView = "upstream";
+    renderSidebar();
+    renderMainView();
+  });
+  banner.querySelector('[data-act="build"]')?.addEventListener("click", () => startUpstreamPipeline("none"));
+  banner.querySelector('[data-act="all"]')?.addEventListener("click", () =>
+    needsBuild ? startUpstreamPipeline("all") : rebuildContainers("all"),
+  );
+  banner.querySelector('[data-act="dismiss"]').addEventListener("click", () => {
+    try {
+      localStorage.setItem(UPSTREAM_DISMISS_KEY, upstreamDismissKey(up));
+    } catch (err) {
+      /* per-viewer convenience only */
+    }
+    banner.classList.add("hidden");
+  });
+}
+
+function renderUpstreamView() {
+  const up = state.upstream;
+  if (!up) return;
+  const { local, remote, build } = up;
+
+  document.getElementById("upstream-remote-label").innerHTML =
+    `Tracking <code>${escapeHtml(remote.remote_url)}</code> on branch <code>${escapeHtml(remote.branch)}</code>` +
+    ` • last checked ${escapeHtml(remote.checked_at)}${remote.error ? ` • <span class="badge err">${escapeHtml(remote.error)}</span>` : ""}`;
+
+  const cloneLabel = document.getElementById("btn-upstream-build-only");
+  cloneLabel.textContent = local.cloned ? "Pull & Build Only" : "Clone & Build Only";
+
+  document.getElementById("upstream-summary-cards").innerHTML = `
+    <div class="stat-card">
+      <span class="stat-label">Local Checkout</span>
+      <span class="stat-value">${local.cloned ? `#${escapeHtml(local.short_sha)}` : "Not cloned"}</span>
+      <span class="stat-sub mono" style="word-break:break-all;">${escapeHtml(local.repo_root)}${local.branch ? ` (${escapeHtml(local.branch)})` : ""}</span>
+      <span class="stat-sub">${local.dirty_count ? `${local.dirty_count} uncommitted change(s) — stashed before pulling` : escapeHtml(local.subject)}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">GitHub (${escapeHtml(remote.branch)})</span>
+      <span class="stat-value">${remote.remote_short_sha ? `#${escapeHtml(remote.remote_short_sha)}` : "Unknown"}</span>
+      <span class="stat-sub">${remote.commits_behind > 0 && local.cloned ? `${remote.commits_behind} commit(s) ahead of local` : remote.fetch_ok ? "Local checkout is current" : "Could not reach GitHub"}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Built Runtime</span>
+      <span class="stat-value">${build.binary_exists ? `#${escapeHtml(build.short_sha || "?")}` : "Not built"}</span>
+      <span class="stat-sub">${build.binary_exists ? `Built ${escapeHtml(build.built_at)} • SHA-256 <code>${escapeHtml(build.binary_sha256)}</code>` : escapeHtml(build.binary_path)}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Containers</span>
+      <span class="stat-value">${up.total_containers_count - up.outdated_containers_count}/${up.total_containers_count} current</span>
+      <span class="stat-sub">${up.outdated_containers_count} can be rebuilt</span>
+    </div>
+  `;
+
+  const incoming = remote.incoming_commits || [];
+  document.getElementById("upstream-incoming").innerHTML = `
+    <strong>${escapeHtml(up.headline)}</strong>
+    ${incoming.length
+      ? `<ul class="commit-list">${incoming
+          .map((c) => `<li><code>${escapeHtml(c.sha)}</code>${escapeHtml(c.subject)} <span class="muted">— ${escapeHtml(c.author)}, ${escapeHtml(c.rel_time)}</span></li>`)
+          .join("")}</ul>`
+      : `<p class="muted">No incoming commits.</p>`}
+  `;
+
+  const tbody = document.getElementById("upstream-containers-body");
+  tbody.innerHTML = "";
+  for (const c of up.containers) {
+    const stClass = c.status === "up_to_date" ? "ok" : "warn";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${escapeHtml(c.display_name)}</strong><div class="muted">${escapeHtml(c.current_snapshot_version)}</div></td>
+      <td><code>${escapeHtml(c.container_raven_short)}</code><div class="muted">${escapeHtml(c.container_raven_updated_at || "")}</div></td>
+      <td><span class="badge ${stClass}">${escapeHtml(c.status.replace(/_/g, " "))}</span><div class="muted">${escapeHtml(c.reason)}</div></td>
+      <td style="text-align:right;"><button type="button" class="btn btn-sm ${c.matches_latest ? "btn-secondary" : "btn-accent"}">Rebuild</button></td>
+    `;
+    tr.querySelector("button").addEventListener("click", () =>
+      up.has_remote_updates || up.needs_runtime_build ? startUpstreamPipeline(c.id) : rebuildContainers(c.id),
+    );
+    tbody.appendChild(tr);
+  }
+}
+
 function renderDoctorView() {
   if (!state.doctor) return;
   const doc = state.doctor;
@@ -842,6 +1029,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Sidebar navigation
   for (const [id, view] of [
+    ["nav-upstream", "upstream"],
     ["nav-doctor", "doctor"],
     ["nav-processes", "processes"],
     ["nav-trash", "trash"],
@@ -1230,7 +1418,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // Raven Upstream actions
+  document.getElementById("btn-upstream-check").addEventListener("click", async () => {
+    showToast("Checking GitHub for new Raven commits...");
+    await refreshUpstream(true);
+  });
+  document.getElementById("btn-upstream-build-only").addEventListener("click", () => startUpstreamPipeline("none"));
+  document.getElementById("btn-upstream-build-all").addEventListener("click", () => startUpstreamPipeline("all"));
+  document.getElementById("btn-upstream-rebuild-all").addEventListener("click", () => rebuildContainers("all"));
+
   await refreshState();
   const interval = state.config?.server?.poll_interval_ms || 2500;
   setInterval(refreshState, interval);
+
+  await refreshUpstream();
+  const upCfg = state.config?.upstream || {};
+  if (upCfg.auto_check_enabled !== false) {
+    setInterval(() => refreshUpstream(), (upCfg.check_interval_sec || 60) * 1000);
+  }
 });
