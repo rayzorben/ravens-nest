@@ -1,0 +1,647 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8470,
+    "poll_interval_ms": 2500,
+    "max_log_lines": 2000,
+    "inspect_transitive_limit": 12
+  },
+  "paths": {
+    "repo_root": "{auto_repo_root}",
+    "build_dir": "{repo_root}/build",
+    "native_dir": "{build_dir}/native",
+    "raven_bin": "{native_dir}/raven",
+    "prefixes_root": "{home}/.local/share/raven",
+    "trash_root": "{prefixes_root}/.trash",
+    "user_config_file": "{home}/.config/raven-nest/config.json",
+    "local_bin_dir": "{home}/.local/bin",
+    "desktop_entries_dir": "{home}/.local/share/applications",
+    "fonts_dir": "/usr/share/fonts/liberation",
+    "skia_source_dir": "{build_dir}/skia-src",
+    "skia_library_path": "{build_dir}/skia-src/out/cpu/libskia.a",
+    "roots_dir": "{build_dir}/roots",
+    "rtl_component_path": "{build_dir}/rtl-x64/raven-rtl.dll",
+    "text_component_path": "{build_dir}/text-x64/raven-text.dll",
+    "controls64_dir": "{build_dir}/controls-x64",
+    "controls32_dir": "{build_dir}/controls-x86",
+    "installer64_dir": "{build_dir}/installer-x64",
+    "installer32_dir": "{build_dir}/installer-x86",
+    "graphics_dir": "{build_dir}/graphics",
+    "testdata_dir": "{build_dir}/testdata"
+  },
+  "ui": {
+    "title": "Raven Nest",
+    "subtitle": "Windows Application Sandbox & Deployment Manager",
+    "default_theme": "dark",
+    "window_width": 1360,
+    "window_height": 860,
+    "default_timeout_ms": 86400000,
+    "installer_timeout_ms": 1800000
+  },
+  "desktop_backends": [
+    {
+      "id": "wayland",
+      "label": "Wayland Native (--desktop=wayland)",
+      "flag": "--desktop=wayland"
+    },
+    {
+      "id": "x11",
+      "label": "X11 / XWayland (--desktop=x11)",
+      "flag": "--desktop=x11"
+    }
+  ],
+  "blueprints": [
+    {
+      "id": "gaming_cad",
+      "name": "Gaming & CAD (Direct3D 11/12 + Qt6 + VC++ 2022)",
+      "description": "Full DXVK + vkd3d-proton acceleration, Skia TrueType text, 32/64-bit MSI support, and VC++ 2015–2022 redistributables.",
+      "default_desktop": "wayland",
+      "default_env": {
+        "RAVEN_BACKTRACE": "1"
+      },
+      "auto_deploy_redist": true
+    },
+    {
+      "id": "app_sandbox",
+      "name": "Application Sandbox (Standard Win32/Win64)",
+      "description": "Isolated Windows C: drive and registry with Common Controls, RichEdit, OLE/COM servers, and UCRT.",
+      "default_desktop": "wayland",
+      "default_env": {
+        "RAVEN_BACKTRACE": "1"
+      },
+      "auto_deploy_redist": true
+    },
+    {
+      "id": "msi_mixed",
+      "name": "Mixed 32/64-bit MSI Installer Environment",
+      "description": "Pre-stages both System32 and SysWOW64 Windows Installer (msiexec.exe) and SxS assemblies for complex installers.",
+      "default_desktop": "wayland",
+      "default_env": {
+        "RAVEN_BACKTRACE": "1"
+      },
+      "auto_deploy_redist": true
+    },
+    {
+      "id": "minimal",
+      "name": "Minimal Clean Sandbox",
+      "description": "Clean prefix with core system utilities only; no pre-deployed third-party redistributables.",
+      "default_desktop": "wayland",
+      "default_env": {},
+      "auto_deploy_redist": false
+    }
+  ],
+  "snapshots": {
+    "max_retained_auto": 10,
+    "auto_snapshot_before_rollback": true,
+    "auto_snapshot_before_delete": false,
+    "default_manual_tag": "manual"
+  },
+  "font_qualification": {
+    "required_files": [
+      "LiberationSans-Regular.ttf",
+      "LiberationMono-Regular.ttf",
+      "LiberationSerif-Regular.ttf"
+    ]
+  },
+  "toolchain": {
+    "required_binaries": [
+      "cmake",
+      "ninja",
+      "g++",
+      "clang",
+      "x86_64-w64-mingw32-gcc",
+      "i686-w64-mingw32-gcc",
+      "x86_64-w64-mingw32-dlltool",
+      "x86_64-w64-mingw32-windres",
+      "widl",
+      "bison"
+    ]
+  },
+  "prefix_system_programs": [
+    "msiexec.exe",
+    "regsvr32.exe",
+    "control.exe",
+    "dism.exe",
+    "fondue.exe",
+    "regedit.exe",
+    "mscoree.dll",
+    "riched20.dll",
+    "msftedit.dll",
+    "l_intl.nls"
+  ],
+  "discovery_excluded_executables": [
+    "unins000.exe",
+    "uninstall.exe",
+    "crashpad_handler.exe",
+    "qtwebengineprocess.exe",
+    "vc_redist.x64.exe",
+    "vc_redist.x86.exe",
+    "dxsetup.exe"
+  ],
+  "sample_applications": [
+    {
+      "name": "Notepad++ 8.7.1 (Portable Test Suite)",
+      "path": "{testdata_dir}/npp/notepad++.exe",
+      "folder": "{testdata_dir}/npp",
+      "install_folder_name": "Notepad++"
+    },
+    {
+      "name": "SQLite3 CLI (64-bit Windows)",
+      "path": "{testdata_dir}/sqlite3.exe"
+    }
+  ],
+  "core_known_dlls": [
+    "ntdll.dll", "kernel32.dll", "kernelbase.dll", "user32.dll", "gdi32.dll",
+    "advapi32.dll", "ole32.dll", "combase.dll", "rpcrt4.dll", "shell32.dll",
+    "shlwapi.dll", "setupapi.dll", "comdlg32.dll"
+  ],
+  "core_system_dlls": [
+    "ntdll.dll", "kernel32.dll", "kernelbase.dll", "user32.dll", "gdi32.dll",
+    "advapi32.dll", "ole32.dll", "combase.dll", "shell32.dll", "shlwapi.dll",
+    "comdlg32.dll", "ws2_32.dll", "wsock32.dll", "crypt32.dll", "bcrypt.dll",
+    "secur32.dll", "version.dll", "winmm.dll", "imm32.dll", "uxtheme.dll",
+    "dwmapi.dll", "winspool.drv", "iphlpapi.dll", "dnsapi.dll", "netapi32.dll",
+    "userenv.dll", "profapi.dll", "powrprof.dll", "wtsapi32.dll", "psapi.dll",
+    "dbghelp.dll", "imagehlp.dll", "winhttp.dll", "wininet.dll", "mpr.dll",
+    "msimg32.dll", "usp10.dll", "opengl32.dll", "glu32.dll", "vulkan-1.dll",
+    "mfplat.dll", "mfreadwrite.dll", "xinput1_4.dll", "normaliz.dll",
+    "hid.dll", "cfgmgr32.dll", "devobj.dll", "ntmarta.dll", "samlib.dll",
+    "wevtapi.dll", "pdh.dll", "avrt.dll", "mmdevapi.dll", "dsound.dll",
+    "dinput8.dll", "faultrep.dll", "wer.dll", "sensapi.dll", "oleacc.dll",
+    "uiautomationcore.dll", "wintrust.dll", "ncrypt.dll", "cryptsp.dll",
+    "rsaenh.dll", "cabinet.dll", "msi.dll", "sxs.dll", "rpcrt4.dll"
+  ],
+  "implicit_runtime_components": [
+    {
+      "dll": "raven-rtl.dll",
+      "only_64": true,
+      "target64": "{native_dir}/raven-rtl.dll",
+      "source64": "{rtl_component_path}",
+      "description": "Guest Heap Allocator (D6: RtlAllocateHeap / GetProcessHeap)"
+    },
+    {
+      "dll": "raven-user32.dll",
+      "only_64": false,
+      "target64": "{native_dir}/raven-user32.dll",
+      "target32": "{native_dir}/x86/raven-user32.dll",
+      "source64": "{controls64_dir}/raven-user32.dll",
+      "source32": "{controls32_dir}/raven-user32.dll",
+      "description": "Built-in Control Classes & Dialog Manager (D5)"
+    },
+    {
+      "dll": "raven-shell.dll",
+      "only_64": false,
+      "target64": "{native_dir}/raven-shell.dll",
+      "target32": "{native_dir}/x86/raven-shell.dll",
+      "source64": "{controls64_dir}/raven-shell.dll",
+      "source32": "{controls32_dir}/raven-shell.dll",
+      "description": "Graphical Shell & Common Dialogs Component (D5)"
+    },
+    {
+      "dll": "raven-text.dll",
+      "only_64": true,
+      "target64": "{native_dir}/raven-text.dll",
+      "source64": "{text_component_path}",
+      "description": "Text Shaping & Layout Component (D7)"
+    }
+  ],
+  "runtime_components": {
+    "ucrtbase.dll": {
+      "component64": "ucrtbase.dll",
+      "component32": "ucrtbase32.dll",
+      "source64": "{controls64_dir}/ucrtbase.dll",
+      "source32": "{native_dir}/ucrtbase32.dll",
+      "group": "controls",
+      "description": "Universal C Runtime (MSVC 2015–2022 + api-ms-win-crt-*)"
+    },
+    "msvcrt.dll": {
+      "component64": "ucrtbase.dll",
+      "component32": "ucrtbase32.dll",
+      "source64": "{controls64_dir}/ucrtbase.dll",
+      "source32": "{native_dir}/ucrtbase32.dll",
+      "group": "controls",
+      "description": "Windows MSVCRT answered by Raven CRT component"
+    },
+    "comctl32.dll": {
+      "component64": "comctl32.dll",
+      "component32": "x86/comctl32.dll",
+      "source64": "{controls64_dir}/comctl32.dll",
+      "source32": "{controls32_dir}/comctl32.dll",
+      "group": "controls",
+      "description": "Windows Common Controls (v5/v6 SxS)"
+    },
+    "dwrite.dll": {
+      "component64": "raven-dwrite.dll",
+      "source64": "{controls64_dir}/raven-dwrite.dll",
+      "group": "controls",
+      "description": "DirectWrite Typography Component"
+    },
+    "d2d1.dll": {
+      "component64": "raven-d2d1.dll",
+      "source64": "{controls64_dir}/raven-d2d1.dll",
+      "group": "controls",
+      "description": "Direct2D Vector Graphics Component"
+    },
+    "uianimation.dll": {
+      "component64": "raven-uianimation.dll",
+      "source64": "{controls64_dir}/raven-uianimation.dll",
+      "group": "controls",
+      "description": "Windows Animation Manager Component"
+    },
+    "oleaut32.dll": {
+      "component64": "oleaut32.dll",
+      "component32": "x86/oleaut32.dll",
+      "source64": "{installer64_dir}/oleaut32.dll",
+      "source32": "{installer32_dir}/oleaut32.dll",
+      "group": "installer",
+      "description": "OLE Automation (BSTR, VARIANT, SafeArray, TypeLib)"
+    },
+    "setupapi.dll": {
+      "component64": "raven-setupapi.dll",
+      "component32": "x86/raven-setupapi.dll",
+      "source64": "{installer64_dir}/raven-setupapi.dll",
+      "source32": "{installer32_dir}/raven-setupapi.dll",
+      "group": "installer",
+      "description": "Windows SetupAPI & INF Engine"
+    },
+    "avifil32.dll": {
+      "component64": "avifil32.dll",
+      "component32": "x86/avifil32.dll",
+      "source64": "{installer64_dir}/avifil32.dll",
+      "source32": "{installer32_dir}/avifil32.dll",
+      "group": "installer",
+      "description": "AVI File Support Library"
+    },
+    "avicap32.dll": {
+      "component64": "avicap32.dll",
+      "component32": "x86/avicap32.dll",
+      "source64": "{installer64_dir}/avicap32.dll",
+      "source32": "{installer32_dir}/avicap32.dll",
+      "group": "installer",
+      "description": "AVI Capture Library"
+    },
+    "msvfw32.dll": {
+      "component64": "msvfw32.dll",
+      "component32": "x86/msvfw32.dll",
+      "source64": "{installer64_dir}/msvfw32.dll",
+      "source32": "{installer32_dir}/msvfw32.dll",
+      "group": "installer",
+      "description": "Video for Windows DLL"
+    },
+    "msacm32.dll": {
+      "component64": "msacm32.dll",
+      "component32": "x86/msacm32.dll",
+      "source64": "{installer64_dir}/msacm32.dll",
+      "source32": "{installer32_dir}/msacm32.dll",
+      "group": "installer",
+      "description": "Audio Compression Manager"
+    },
+    "dbgeng.dll": {
+      "component64": "dbgeng.dll",
+      "component32": "x86/dbgeng.dll",
+      "source64": "{installer64_dir}/dbgeng.dll",
+      "source32": "{installer32_dir}/dbgeng.dll",
+      "group": "installer",
+      "description": "Windows Symbolic Debugger Engine"
+    },
+    "gdiplus.dll": {
+      "component64": "gdiplus.dll",
+      "component32": "x86/gdiplus.dll",
+      "source64": "{installer64_dir}/gdiplus.dll",
+      "source32": "{installer32_dir}/gdiplus.dll",
+      "group": "installer",
+      "description": "GDI+ Flat API Component"
+    },
+    "windowscodecs.dll": {
+      "component64": "windowscodecs.dll",
+      "component32": "x86/windowscodecs.dll",
+      "source64": "{installer64_dir}/windowscodecs.dll",
+      "source32": "{installer32_dir}/windowscodecs.dll",
+      "group": "installer",
+      "description": "Windows Imaging Component (WIC)"
+    },
+    "msxml3.dll": {
+      "component64": "msxml3.dll",
+      "component32": "x86/msxml3.dll",
+      "source64": "{installer64_dir}/msxml3.dll",
+      "source32": "{installer32_dir}/msxml3.dll",
+      "group": "installer",
+      "description": "MSXML 3.0 DOM/SAX Parser"
+    },
+    "urlmon.dll": {
+      "component64": "urlmon.dll",
+      "component32": "x86/urlmon.dll",
+      "source64": "{installer64_dir}/urlmon.dll",
+      "source32": "{installer32_dir}/urlmon.dll",
+      "group": "installer",
+      "description": "OLE32 URL Moniker Component"
+    },
+    "atl100.dll": {
+      "component64": "atl100.dll",
+      "component32": "x86/atl100.dll",
+      "source64": "{installer64_dir}/atl100.dll",
+      "source32": "{installer32_dir}/atl100.dll",
+      "group": "installer",
+      "description": "Active Template Library 10.0"
+    },
+    "riched20.dll": {
+      "component64": "riched20.dll",
+      "component32": "x86/riched20.dll",
+      "source64": "{installer64_dir}/riched20.dll",
+      "source32": "{installer32_dir}/riched20.dll",
+      "group": "installer",
+      "description": "RichEdit 2.0/3.0 Text Control"
+    },
+    "msftedit.dll": {
+      "component64": "msftedit.dll",
+      "component32": "x86/msftedit.dll",
+      "source64": "{installer64_dir}/msftedit.dll",
+      "source32": "{installer32_dir}/msftedit.dll",
+      "group": "installer",
+      "description": "RichEdit 4.1 Text Control"
+    },
+    "propsys.dll": {
+      "component64": "propsys.dll",
+      "component32": "x86/propsys.dll",
+      "source64": "{installer64_dir}/propsys.dll",
+      "source32": "{installer32_dir}/propsys.dll",
+      "group": "installer",
+      "description": "Windows Property System"
+    },
+    "d3d9.dll": {
+      "component64": "d3d9.dll",
+      "component32": "x86/d3d9.dll",
+      "source64": "{graphics_dir}/dxvk/pe64/d3d9.dll",
+      "source32": "{graphics_dir}/dxvk/pe32/d3d9.dll",
+      "group": "graphics",
+      "description": "Direct3D 9 over Vulkan (DXVK)"
+    },
+    "d3d10core.dll": {
+      "component64": "d3d10core.dll",
+      "component32": "x86/d3d10core.dll",
+      "source64": "{graphics_dir}/dxvk/pe64/d3d10core.dll",
+      "source32": "{graphics_dir}/dxvk/pe32/d3d10core.dll",
+      "group": "graphics",
+      "description": "Direct3D 10 Core over Vulkan (DXVK)"
+    },
+    "d3d11.dll": {
+      "component64": "d3d11.dll",
+      "component32": "x86/d3d11.dll",
+      "source64": "{graphics_dir}/dxvk/pe64/d3d11.dll",
+      "source32": "{graphics_dir}/dxvk/pe32/d3d11.dll",
+      "group": "graphics",
+      "description": "Direct3D 11 over Vulkan (DXVK)"
+    },
+    "dxgi.dll": {
+      "component64": "dxgi.dll",
+      "component32": "x86/dxgi.dll",
+      "source64": "{graphics_dir}/dxvk/pe64/dxgi.dll",
+      "source32": "{graphics_dir}/dxvk/pe32/dxgi.dll",
+      "group": "graphics",
+      "description": "DirectX Graphics Infrastructure (DXVK)"
+    },
+    "d3d12.dll": {
+      "component64": "d3d12.dll",
+      "source64": "{graphics_dir}/vkd3d-proton/pe64/d3d12.dll",
+      "group": "graphics",
+      "description": "Direct3D 12 over Vulkan (vkd3d-proton)"
+    },
+    "d3d12core.dll": {
+      "component64": "d3d12core.dll",
+      "source64": "{graphics_dir}/vkd3d-proton/pe64/d3d12core.dll",
+      "group": "graphics",
+      "description": "Direct3D 12 Core over Vulkan (vkd3d-proton)"
+    },
+    "d3dcompiler_47.dll": {
+      "component64": "d3dcompiler_47.dll",
+      "component32": "x86/d3dcompiler_47.dll",
+      "source64": "{native_dir}/d3dcompiler_47.dll",
+      "source32": "{native_dir}/x86/d3dcompiler_47.dll",
+      "group": "graphics",
+      "description": "Direct3D HLSL Shader Blob Component"
+    }
+  },
+  "redistributables": {
+    "vc2015_2022": {
+      "name": "Visual C++ 2015–2022 Redistributable (v14)",
+      "dlls": [
+        "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll",
+        "msvcp140_atomic_wait.dll", "msvcp140_codecvt_ids.dll",
+        "vcruntime140.dll", "vcruntime140_1.dll", "vcruntime140_threads.dll",
+        "concrt140.dll", "vcomp140.dll", "mfc140.dll", "mfc140u.dll"
+      ]
+    },
+    "vc2013": {
+      "name": "Visual C++ 2013 Redistributable (v12)",
+      "dlls": ["msvcr120.dll", "msvcp120.dll", "vcomp120.dll", "mfc120.dll", "mfc120u.dll"]
+    },
+    "vc2010": {
+      "name": "Visual C++ 2010 Redistributable (v10)",
+      "dlls": ["msvcr100.dll", "msvcp100.dll", "vcomp100.dll", "mfc100.dll", "mfc100u.dll"]
+    },
+    "directx_june2010": {
+      "name": "DirectX End-User Runtimes (June 2010)",
+      "dlls": [
+        "d3dx9_43.dll", "d3dx9_42.dll", "d3dx9_41.dll", "d3dx9_40.dll",
+        "d3dx10_43.dll", "d3dx11_43.dll", "d3dcompiler_43.dll",
+        "xinput1_3.dll", "xaudio2_7.dll", "x3daudio1_7.dll"
+      ]
+    },
+    "dotnet": {
+      "name": ".NET Framework Runtime (CLR / mscoree)",
+      "dlls": ["mscoree.dll", "mscorwks.dll", "clr.dll"]
+    }
+  },
+  "doctor_checks": [
+    {
+      "id": "core_runtime",
+      "code": "Core",
+      "title": "Raven Native Runtime & Bootstrap",
+      "description": "Linux x86_64 kernel/Win32 syscall runtime (raven + raven-bootstrap)",
+      "files": [
+        "{native_dir}/raven",
+        "{native_dir}/raven-bootstrap",
+        "{native_dir}/l_intl.nls",
+        "{native_dir}/x86/l_intl.nls"
+      ],
+      "repair_action": "build_runtime"
+    },
+    {
+      "id": "controls_64",
+      "code": "D5",
+      "title": "64-bit Controls, UCRT & DirectWrite/Direct2D",
+      "description": "Serves msvcrt.dll, ucrtbase.dll (~120 VC2022 exports), comctl32, raven-user32, raven-shell, DirectWrite & Direct2D",
+      "files": [
+        "{native_dir}/ucrtbase.dll",
+        "{native_dir}/comctl32.dll",
+        "{native_dir}/raven-user32.dll",
+        "{native_dir}/raven-shell.dll",
+        "{native_dir}/raven-dwrite.dll",
+        "{native_dir}/raven-d2d1.dll",
+        "{native_dir}/raven-uianimation.dll",
+        "{native_dir}/raven-storage.dll",
+        "{native_dir}/control.exe",
+        "{native_dir}/regedit.exe",
+        "{native_dir}/mscoree.dll"
+      ],
+      "repair_action": "provision_controls_64"
+    },
+    {
+      "id": "controls_32",
+      "code": "D9",
+      "title": "32-bit (SysWOW64) Controls & UCRT",
+      "description": "Required by 32-bit programs and 32-bit MSI custom actions in 64-bit installers",
+      "files": [
+        "{native_dir}/ucrtbase32.dll",
+        "{native_dir}/x86/comctl32.dll",
+        "{native_dir}/x86/raven-user32.dll",
+        "{native_dir}/x86/raven-shell.dll",
+        "{native_dir}/x86/raven-storage.dll",
+        "{native_dir}/x86/control.exe",
+        "{native_dir}/x86/regedit.exe",
+        "{native_dir}/x86/mscoree.dll"
+      ],
+      "repair_action": "provision_controls_32"
+    },
+    {
+      "id": "installer_64",
+      "code": "D1 / D2",
+      "title": "64-bit Windows Installer (MSI) & Multimedia/OLE Suite",
+      "description": "msiexec.exe, msi.dll, cabinet.dll, sxs.dll, oleaut32, msxml3, windowscodecs, avifil32, avicap32, msacm32, dbgeng",
+      "files": [
+        "{native_dir}/msiexec.exe",
+        "{native_dir}/regsvr32.exe",
+        "{native_dir}/msi.dll",
+        "{native_dir}/cabinet.dll",
+        "{native_dir}/sxs.dll",
+        "{native_dir}/oleaut32.dll",
+        "{native_dir}/msxml3.dll",
+        "{native_dir}/windowscodecs.dll",
+        "{native_dir}/avifil32.dll",
+        "{native_dir}/avicap32.dll",
+        "{native_dir}/msacm32.dll",
+        "{native_dir}/dbgeng.dll",
+        "{native_dir}/raven-setupapi.dll"
+      ],
+      "repair_action": "provision_installer_64"
+    },
+    {
+      "id": "installer_32",
+      "code": "D9",
+      "title": "32-bit (SysWOW64) Windows Installer (MSI) Suite",
+      "description": "Prevents 64-bit MSI installers with 32-bit custom actions from hanging on SysWOW64\\msiexec.exe",
+      "files": [
+        "{native_dir}/x86/msiexec.exe",
+        "{native_dir}/x86/regsvr32.exe",
+        "{native_dir}/x86/msi.dll",
+        "{native_dir}/x86/cabinet.dll",
+        "{native_dir}/x86/sxs.dll",
+        "{native_dir}/x86/oleaut32.dll",
+        "{native_dir}/x86/msxml3.dll",
+        "{native_dir}/x86/windowscodecs.dll",
+        "{native_dir}/x86/avifil32.dll",
+        "{native_dir}/x86/avicap32.dll",
+        "{native_dir}/x86/msacm32.dll",
+        "{native_dir}/x86/dbgeng.dll"
+      ],
+      "repair_action": "provision_installer_32"
+    },
+    {
+      "id": "rtl_heap",
+      "code": "D6",
+      "title": "RTL Guest Heap Component (raven-rtl.dll)",
+      "description": "Provides RtlAllocateHeap / GetProcessHeap for 64-bit processes",
+      "files": [
+        "{native_dir}/raven-rtl.dll"
+      ],
+      "repair_action": "provision_rtl"
+    },
+    {
+      "id": "text_roots",
+      "code": "D7",
+      "title": "Text Layout Component & Root Certificates",
+      "description": "raven-text.dll and Mozilla CA root certificates for Authenticode / TLS verification",
+      "files": [
+        "{native_dir}/raven-text.dll",
+        "{roots_dir}"
+      ],
+      "check_glob": {
+        "dir": "{native_dir}/roots",
+        "pattern": "*.crt",
+        "label": "build/native/roots/*.crt"
+      },
+      "repair_action": "provision_text_roots"
+    },
+    {
+      "id": "skia_fonts",
+      "code": "D8",
+      "title": "Skia CPU Engine & Qualified Liberation Fonts",
+      "description": "Required for GDI text metrics (GetTextMetricsW) and anti-aliased TrueType rendering",
+      "files": [
+        "{skia_library_path}",
+        "{fonts_dir}/LiberationSans-Regular.ttf",
+        "{fonts_dir}/LiberationMono-Regular.ttf",
+        "{fonts_dir}/LiberationSerif-Regular.ttf"
+      ],
+      "repair_action": "reconfigure_cmake"
+    },
+    {
+      "id": "graphics_d3d",
+      "code": "D10",
+      "title": "Direct3D 9/10/11/12 Translation Layer (DXVK + vkd3d-proton + d3dcompiler_47)",
+      "description": "Hardware Vulkan acceleration for Direct3D 8/9/10/11 (DXVK) and Direct3D 12 (vkd3d-proton)",
+      "files": [
+        "{native_dir}/d3d9.dll",
+        "{native_dir}/d3d10core.dll",
+        "{native_dir}/d3d11.dll",
+        "{native_dir}/dxgi.dll",
+        "{native_dir}/d3d12.dll",
+        "{native_dir}/d3d12core.dll",
+        "{native_dir}/d3dcompiler_47.dll",
+        "{native_dir}/x86/d3d9.dll",
+        "{native_dir}/x86/d3d11.dll",
+        "{native_dir}/x86/dxgi.dll",
+        "{native_dir}/x86/d3dcompiler_47.dll"
+      ],
+      "repair_action": "provision_graphics"
+    }
+  ],
+  "diagnostic_rules": [
+    {
+      "pattern": "missing DOS signature",
+      "severity": "error",
+      "title": "D1: MSI / Non-PE Package Executed Directly",
+      "advice": "MSI packages are OLE compound documents. Use the 'Run Installer' button or wrap with msiexec.exe /i Z:\\path\\to\\file.msi."
+    },
+    {
+      "pattern": "GetProcessHeap",
+      "severity": "error",
+      "title": "D6: Missing RTL Guest Heap Component (raven-rtl.dll)",
+      "advice": "Run 'Auto-Deploy Libraries' or provision build/rtl-x64/raven-rtl.dll into build/native."
+    },
+    {
+      "pattern": "GetTextMetricsW",
+      "severity": "error",
+      "title": "D8: Skia Text Engine Not Linked",
+      "advice": "GDI text functions require RAVEN_SKIA=1 and matching Liberation font SHA-256 hashes. Use Deployment Doctor to reconfigure CMake."
+    },
+    {
+      "pattern": "missing PE module: (msvcrt|ucrtbase)\\.dll",
+      "severity": "error",
+      "title": "D5: Missing Controls / UCRT Component Set",
+      "advice": "Deploy ucrtbase.dll and comctl32.dll from build/controls-x64."
+    },
+    {
+      "pattern": "unsupported native input event or input queue exhaustion",
+      "severity": "warning",
+      "title": "Issue 1 / F4: Wayland Input Queue or Keymap Error",
+      "advice": "Ensure commit 5748053 (non-NUL keymap fix for niri) is built, or avoid high-rate pointer motion over blocked windows."
+    },
+    {
+      "pattern": "missing PE export:\\s*([^\\n]+)",
+      "severity": "error",
+      "title": "Unresolved PE Import Symbol",
+      "advice": "Inspect the executable in the Dependency Inspector to check if an app-local DLL or VC++ redistributable is missing."
+    }
+  ]
+}

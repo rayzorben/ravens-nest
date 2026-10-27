@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raven Nest — Windows Application Sandbox &amp; Deployment Manager</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <div class="brand-header">
+        <img src="/logo.svg" alt="Raven Logo" class="brand-logo" width="36" height="36">
+        <div class="brand-text">
+          <h1 id="brand-title">Raven Nest</h1>
+          <span class="brand-subtitle" id="brand-subtitle">Native Linux Sandbox UI</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span>SANDBOX CONTAINERS</span>
+          <button type="button" class="icon-btn" id="btn-new-container" title="Create New Container">+</button>
+        </div>
+        <div id="containers-list" class="nav-list"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span>ENGINE &amp; GOVERNANCE</span>
+        </div>
+        <div class="nav-list">
+          <button type="button" class="nav-item" id="nav-doctor">
+            <span class="nav-icon">⚕</span>
+            <div class="nav-item-body">
+              <span class="nav-title">Deployment Doctor</span>
+              <span class="nav-meta" id="doctor-badge">Checking D1–D13...</span>
+            </div>
+          </button>
+          <button type="button" class="nav-item" id="nav-processes">
+            <span class="nav-icon">▶</span>
+            <div class="nav-item-body">
+              <span class="nav-title">Process &amp; Trace Console</span>
+              <span class="nav-meta" id="processes-badge">0 active</span>
+            </div>
+          </button>
+          <button type="button" class="nav-item" id="nav-trash">
+            <span class="nav-icon">🗑</span>
+            <div class="nav-item-body">
+              <span class="nav-title">Trash &amp; Archive</span>
+              <span class="nav-meta" id="trash-badge">0 archived</span>
+            </div>
+          </button>
+          <button type="button" class="nav-item" id="nav-config">
+            <span class="nav-icon">⚙</span>
+            <div class="nav-item-body">
+              <span class="nav-title">Configuration (JSON)</span>
+              <span class="nav-meta">Everything as Config</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="theme-switcher" role="group" aria-label="Color Theme">
+          <button type="button" class="theme-btn" data-theme-choice="dark" title="Dark Theme">🌙 Dark</button>
+          <button type="button" class="theme-btn" data-theme-choice="light" title="Light Theme">☀️ Light</button>
+          <button type="button" class="theme-btn" data-theme-choice="system" title="Match System Theme">🖥 Auto</button>
+        </div>
+        <div class="host-pill" id="host-session-pill">
+          <span class="status-dot ok"></span>
+          <span id="host-compositor-label">Wayland Native</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-view">
+      <!-- Top Action Bar -->
+      <header class="topbar">
+        <div class="topbar-title-group">
+          <h2 id="view-title">Loading Container...</h2>
+          <span class="badge" id="view-version-badge">v1</span>
+          <span class="badge" id="view-badge">PE64 / SysWOW64</span>
+        </div>
+        <div class="topbar-actions" id="container-top-actions">
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-clone-container" title="Clone or Fork Container">
+            <span>⧉</span> Clone
+          </button>
+          <button type="button" class="btn btn-sm btn-danger" id="btn-delete-container" title="Delete or Trash Container">
+            <span>🗑</span> Delete
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-browse-installer">
+            <span>📦</span> Run EXE / MSI Installer...
+          </button>
+          <button type="button" class="btn btn-sm btn-accent" id="btn-auto-deploy-container">
+            <span>⚡</span> Auto-Deploy Libraries
+          </button>
+        </div>
+      </header>
+
+      <!-- Container View -->
+      <section id="view-container" class="content-pane">
+        <!-- Sub-navigation Tabs -->
+        <div class="tab-strip" role="tablist">
+          <button type="button" class="tab-btn active" data-tab="tab-programs">Applications &amp; Runners</button>
+          <button type="button" class="tab-btn" data-tab="tab-inspector">Dependency &amp; DLL Inspector</button>
+          <button type="button" class="tab-btn" data-tab="tab-snapshots">Versioning, Snapshots &amp; Rollback</button>
+          <button type="button" class="tab-btn" data-tab="tab-redist">Redistributables</button>
+          <button type="button" class="tab-btn" data-tab="tab-settings">Container Config &amp; Env</button>
+        </div>
+
+        <!-- TAB 1: Applications & Runners -->
+        <div id="tab-programs" class="tab-panel active">
+          <div class="summary-grid" id="container-summary-cards"></div>
+
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div>
+                <h3>Application Runners</h3>
+                <p class="muted">Discovered executables in <code>drive_c/Program Files</code> and pinned runners for this sandbox.</p>
+              </div>
+              <div class="header-btn-group">
+                <button type="button" class="btn btn-sm btn-secondary" id="btn-add-app">+ Add Executable</button>
+              </div>
+            </div>
+            <div id="apps-list" class="apps-list"></div>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div>
+                <h3>Quick Test Suite &amp; System Utilities</h3>
+                <p class="muted">Built-in Windows utilities and portable apps ready to run in this sandbox.</p>
+              </div>
+            </div>
+            <div id="sys-tools-list" class="apps-list"></div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Dependency & Library Inspector -->
+        <div id="tab-inspector" class="tab-panel">
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div>
+                <h3>Automatic Binary &amp; Transitive DLL Inspector</h3>
+                <p class="muted">Uses <code>raven --inspect</code> to analyze PE64/PE32 imports, detect MSI packages, verify Raven runtime components, and idempotently deploy missing VC++ / DirectX libraries.</p>
+              </div>
+              <div class="header-btn-group">
+                <select id="inspector-app-select" class="input-select"></select>
+                <button type="button" class="btn btn-sm btn-secondary" id="btn-inspect-pick">Browse File...</button>
+                <button type="button" class="btn btn-sm btn-accent" id="btn-deploy-missing-inspector">⚡ Deploy Missing Libraries</button>
+              </div>
+            </div>
+
+            <div id="inspector-results" class="inspector-results">
+              <div class="empty-state">Select an application above or click "Inspect DLLs" on any runner to analyze its dependency tree.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: Versioning, Snapshots & Rollback -->
+        <div id="tab-snapshots" class="tab-panel">
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div>
+                <h3>Version History, Snapshots &amp; Non-Destructive Rollback</h3>
+                <p class="muted">Every snapshot is versioned (<code>v1</code>, <code>v2</code>...) and fingerprinted by its <code>registry.dat</code> SHA-256 digest. Rolling back automatically preserves current state as a <code>before-restore</code> checkpoint.</p>
+              </div>
+              <div class="header-btn-group">
+                <button type="button" class="btn btn-sm btn-secondary" id="btn-reboot-prefix">🔄 Simulate Windows Reboot</button>
+                <button type="button" class="btn btn-sm btn-secondary" id="btn-prune-snapshots">🧹 Prune Unpinned</button>
+                <button type="button" class="btn btn-sm btn-danger" id="btn-restore-latest">⏪ Rollback to Latest</button>
+                <button type="button" class="btn btn-sm btn-accent" id="btn-open-snapshot-modal">+ Create Version Snapshot</button>
+              </div>
+            </div>
+            <div id="snapshots-list" class="apps-list"></div>
+          </div>
+        </div>
+
+        <!-- TAB 4: Redistributables & Prefix DLLs -->
+        <div id="tab-redist" class="tab-panel">
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div>
+                <h3>Sandboxed Container Redistributables &amp; COM Registration</h3>
+                <p class="muted">Libraries installed in <code>drive_c/windows/system32</code> (64-bit) and <code>drive_c/windows/syswow64</code> (32-bit).</p>
+              </div>
+              <button type="button" class="btn btn-sm btn-accent" id="btn-sync-redist">⚡ Sync &amp; Auto-Deploy Cached Redistributables</button>
+            </div>
+            <div id="redist-list" class="redist-grid"></div>
+          </div>
+        </div>
+
+        <!-- TAB 5: Container Config & Environment -->
+        <div id="tab-settings" class="tab-panel">
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div>
+                <h3>Container Metadata, Blueprint &amp; Environment Variables</h3>
+                <p class="muted">Persisted in <code>nest.json</code> inside the container root. Updates are idempotent.</p>
+              </div>
+            </div>
+            <form id="form-container-settings" class="settings-form">
+              <div class="two-col-grid">
+                <label class="field-label">
+                  <span>Display Name</span>
+                  <input type="text" id="cfg-container-name" class="input-text" required>
+                </label>
+                <label class="field-label">
+                  <span>Blueprint / Profile Label</span>
+                  <input type="text" id="cfg-container-profile" class="input-text" required>
+                </label>
+              </div>
+              <div class="two-col-grid">
+                <label class="field-label">
+                  <span>Default Display Backend</span>
+                  <select id="cfg-container-desktop" class="input-select"></select>
+                </label>
+                <label class="field-label">
+                  <span>Container Notes / Description</span>
+                  <input type="text" id="cfg-container-notes" class="input-text" placeholder="Optional notes about apps or patches in this container">
+                </label>
+              </div>
+              <label class="field-label">
+                <span>Environment Variables (One <code>KEY=VALUE</code> per line)</span>
+                <textarea id="cfg-container-env" class="input-textarea mono" rows="5" placeholder="RAVEN_BACKTRACE=1&#10;RAVEN_THEME=dark"></textarea>
+              </label>
+              <div class="settings-footer">
+                <button type="submit" class="btn btn-accent">Save Container Configuration</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Deployment Doctor View -->
+      <section id="view-doctor" class="content-pane hidden">
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <div>
+              <h3>Raven Deployment &amp; Provisioning Doctor (D1–D13 Automation)</h3>
+              <p class="muted">Config-driven health verification for build/runtime components, 32-bit SysWOW64 installer dependencies, Liberation font SHA-256 hashes, and CMake cache state.</p>
+            </div>
+            <div class="header-btn-group">
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-doctor-reconfigure">Reconfigure CMake</button>
+              <button type="button" class="btn btn-sm btn-accent" id="btn-doctor-build">Rebuild Runtime Targets</button>
+            </div>
+          </div>
+          <div id="doctor-cmake-banner" class="cmake-banner"></div>
+          <div id="doctor-components-grid" class="doctor-grid"></div>
+        </div>
+      </section>
+
+      <!-- Live Process & Trace Console View -->
+      <section id="view-processes" class="content-pane hidden">
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <div>
+              <h3>Active Runners &amp; Diagnostic Trace Console</h3>
+              <p class="muted">Live stdout/stderr stream with pattern-driven Raven diagnostic translation.</p>
+            </div>
+          </div>
+          <div id="processes-list" class="processes-list"></div>
+        </div>
+      </section>
+
+      <!-- Trash & Archive View -->
+      <section id="view-trash" class="content-pane hidden">
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <div>
+              <h3>Archived &amp; Soft-Deleted Containers (Trash)</h3>
+              <p class="muted">Containers moved to <code>~/.local/share/raven/.trash</code> can be restored with their full snapshot history or permanently purged.</p>
+            </div>
+          </div>
+          <div id="trash-list" class="apps-list"></div>
+        </div>
+      </section>
+
+      <!-- Everything-as-Config View -->
+      <section id="view-config" class="content-pane hidden">
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <div>
+              <h3>Everything as Config — Runtime &amp; UI Configuration</h3>
+              <p class="muted">All paths, timeouts, blueprints, component mappings, and diagnostic rules are loaded from <code>ui/config/default.json</code> and merged with user overrides in <code>~/.config/raven-nest/config.json</code>.</p>
+            </div>
+            <div class="header-btn-group">
+              <button type="button" class="btn btn-sm btn-danger" id="btn-reset-global-config">Reset Overrides to Default</button>
+              <button type="button" class="btn btn-sm btn-accent" id="btn-save-global-config">Save User Overrides</button>
+            </div>
+          </div>
+
+          <div class="two-col-grid">
+            <label class="field-label">
+              <span>Default UI Theme (<code>ui.default_theme</code>)</span>
+              <select id="global-cfg-theme" class="input-select">
+                <option value="dark">Dark (Libadwaita Dark)</option>
+                <option value="light">Light (Libadwaita Light)</option>
+                <option value="system">System Auto</option>
+              </select>
+            </label>
+            <label class="field-label">
+              <span>Max Auto-Retained Unpinned Snapshots (<code>snapshots.max_retained_auto</code>)</span>
+              <input type="number" id="global-cfg-max-snaps" class="input-text" min="1" max="100">
+            </label>
+            <label class="field-label">
+              <span>Default Process Timeout ms (<code>ui.default_timeout_ms</code>)</span>
+              <input type="number" id="global-cfg-timeout" class="input-text" min="1000">
+            </label>
+            <label class="field-label">
+              <span>Transitive DLL Inspection Depth (<code>server.inspect_transitive_limit</code>)</span>
+              <input type="number" id="global-cfg-inspect-limit" class="input-text" min="1" max="100">
+            </label>
+          </div>
+
+          <label class="field-label">
+            <span>User Overrides JSON (<code>~/.config/raven-nest/config.json</code>)</span>
+            <textarea id="global-cfg-json" class="input-textarea mono" rows="10"></textarea>
+          </label>
+
+          <label class="field-label">
+            <span>Resolved Effective Paths (Read-Only)</span>
+            <pre id="global-cfg-paths" class="cmd-box"></pre>
+          </label>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast notification bar -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Modal 1: Create New Sandboxed Container -->
+  <dialog id="dialog-new-container" aria-labelledby="dialog-new-title">
+    <form method="dialog" id="form-new-container" class="modal-form">
+      <div class="modal-header">
+        <h3 id="dialog-new-title">Create New Raven Sandbox Container</h3>
+        <button type="button" class="icon-btn" data-close-dialog="dialog-new-container">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">
+          <span>Container Name</span>
+          <input type="text" id="new-container-name" class="input-text" placeholder="e.g. cad-workstation or office-apps" required>
+        </label>
+        <label class="field-label">
+          <span>Environment Blueprint (Configured in <code>default.json</code>)</span>
+          <select id="new-container-blueprint" class="input-select"></select>
+        </label>
+        <label class="field-label">
+          <span>Display Presentation Backend</span>
+          <select id="new-container-desktop" class="input-select"></select>
+        </label>
+        <label class="field-label">
+          <span>Container Notes (Optional)</span>
+          <input type="text" id="new-container-notes" class="input-text" placeholder="Purpose or target applications">
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="new-container-npp" checked>
+          <span>Pre-install portable Notepad++ 8.7.1 inside container &amp; capture initial <code>v1</code> baseline snapshot</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-dialog="dialog-new-container">Cancel</button>
+        <button type="submit" class="btn btn-accent">Create &amp; Provision Sandbox</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal 2: Create Versioned Snapshot -->
+  <dialog id="dialog-new-snapshot" aria-labelledby="dialog-snap-title">
+    <form method="dialog" id="form-new-snapshot" class="modal-form">
+      <div class="modal-header">
+        <h3 id="dialog-snap-title">Create Versioned Container Snapshot</h3>
+        <button type="button" class="icon-btn" data-close-dialog="dialog-new-snapshot">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">
+          <span>Version Milestone Tag</span>
+          <input type="text" id="snap-tag" class="input-text" placeholder="e.g. working-qt6, pre-patch, clean-redist" value="checkpoint" required>
+        </label>
+        <label class="field-label">
+          <span>Changelog / Version Notes</span>
+          <input type="text" id="snap-notes" class="input-text" placeholder="What changed in this version?">
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="snap-pinned" checked>
+          <span>📌 Pin this version (protect from automatic snapshot pruning)</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-dialog="dialog-new-snapshot">Cancel</button>
+        <button type="submit" class="btn btn-accent">Capture Snapshot Version</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal 3: Clone / Fork Container -->
+  <dialog id="dialog-clone-container" aria-labelledby="dialog-clone-title">
+    <form method="dialog" id="form-clone-container" class="modal-form">
+      <div class="modal-header">
+        <h3 id="dialog-clone-title">Clone / Fork Sandbox Container</h3>
+        <button type="button" class="icon-btn" data-close-dialog="dialog-clone-container">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="clone-source-snapshot">
+        <p class="muted" id="clone-source-desc">Cloning from current live container state.</p>
+        <label class="field-label">
+          <span>New Container Name</span>
+          <input type="text" id="clone-new-name" class="input-text" placeholder="e.g. chief-architect-testing" required>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-dialog="dialog-clone-container">Cancel</button>
+        <button type="submit" class="btn btn-accent">⧉ Create Cloned Sandbox</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal 4: Delete / Archive Container Confirmation -->
+  <dialog id="dialog-delete-container" aria-labelledby="dialog-delete-title">
+    <form method="dialog" id="form-delete-container" class="modal-form">
+      <div class="modal-header">
+        <h3 id="dialog-delete-title">Delete or Archive Container</h3>
+        <button type="button" class="icon-btn" data-close-dialog="dialog-delete-container">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="delete-container-prompt">How would you like to remove this container?</p>
+        <label class="field-label">
+          <span>Deletion Mode</span>
+          <select id="delete-container-mode" class="input-select">
+            <option value="trash">Move to Trash Archive (Safe &amp; Recoverable)</option>
+            <option value="permanent">Permanently Delete from Disk (Irreversible)</option>
+          </select>
+        </label>
+        <label class="checkbox-row" id="delete-snapshots-row">
+          <input type="checkbox" id="delete-container-snapshots">
+          <span>Also delete all version snapshots (<code>.snapshots</code>) if permanently deleting</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-dialog="dialog-delete-container">Cancel</button>
+        <button type="submit" class="btn btn-danger">Confirm Removal</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal 5: Runner Configuration & Launch Options -->
+  <dialog id="dialog-runner-config" aria-labelledby="dialog-runner-title">
+    <form method="dialog" id="form-runner-config" class="modal-form">
+      <div class="modal-header">
+        <h3 id="dialog-runner-title">Configure Application Runner</h3>
+        <button type="button" class="icon-btn" data-close-dialog="dialog-runner-config">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">
+          <span>Application Name</span>
+          <input type="text" id="runner-app-name" class="input-text" required>
+        </label>
+        <label class="field-label">
+          <span>Executable / MSI Package Path</span>
+          <div class="input-with-btn">
+            <input type="text" id="runner-path-display" class="input-text" required>
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-runner-pick-file">Browse...</button>
+          </div>
+        </label>
+        <label class="field-label">
+          <span>Guest Command-Line Arguments</span>
+          <input type="text" id="runner-args" class="input-text" placeholder="e.g. /passive or document.plan">
+        </label>
+        <div class="two-col-grid">
+          <label class="field-label">
+            <span>Display Backend</span>
+            <select id="runner-desktop" class="input-select"></select>
+          </label>
+          <label class="field-label">
+            <span>Timeout (ms)</span>
+            <input type="number" id="runner-timeout" class="input-text" value="86400000">
+          </label>
+        </div>
+        <label class="checkbox-row">
+          <input type="checkbox" id="runner-elevated">
+          <span>Run Elevated as Administrator (<code>--elevated</code>)</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="runner-autodeploy" checked>
+          <span>Auto-detect and idempotently deploy missing runtime DLLs &amp; redistributables before launch</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-export-desktop">Export Linux .desktop Shortcut</button>
+        <button type="button" class="btn btn-secondary" id="btn-save-runner">Pin to Container</button>
+        <button type="submit" class="btn btn-accent">▶ Launch Now</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal 6: File Browser for .exe / .msi selection -->
+  <dialog id="dialog-file-picker" aria-labelledby="dialog-picker-title">
+    <div class="modal-form">
+      <div class="modal-header">
+        <h3 id="dialog-picker-title">Select Windows Executable (.exe) or Installer (.msi)</h3>
+        <button type="button" class="icon-btn" data-close-dialog="dialog-file-picker">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="picker-bar">
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-picker-up">↑ Up</button>
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-picker-home">Home</button>
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-picker-prefix">Container Drive C:</button>
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-picker-testdata">Test Suite</button>
+        </div>
+        <div class="picker-current-path" id="picker-current-path">/home/rayben</div>
+        <div class="picker-list" id="picker-entries"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>
