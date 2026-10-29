@@ -24,6 +24,7 @@ from services.container_service import ContainerService
 from services.dependency_service import DependencyService
 from services.doctor_service import DoctorService
 from services.process_service import ProcessService
+from services.runtime_settings_service import RuntimeSettingsService
 from services.upstream_service import UpstreamService
 from services.version_snapshot_service import VersionSnapshotService
 
@@ -35,7 +36,8 @@ VER_SVC = VersionSnapshotService(CFG)
 DEP_SVC = DependencyService(CFG)
 CONTAINER_SVC = ContainerService(CFG, DEP_SVC, VER_SVC)
 DOCTOR_SVC = DoctorService(CFG)
-PROC_SVC = ProcessService(CFG, CONTAINER_SVC, DEP_SVC, DOCTOR_SVC)
+RUNTIME_SVC = RuntimeSettingsService(CFG, CONTAINER_SVC)
+PROC_SVC = ProcessService(CFG, CONTAINER_SVC, DEP_SVC, DOCTOR_SVC, RUNTIME_SVC)
 UPSTREAM_SVC = UpstreamService(CFG, CONTAINER_SVC, DEP_SVC, VER_SVC, DOCTOR_SVC, PROC_SVC)
 
 
@@ -95,6 +97,11 @@ class RavenAPIHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json(UPSTREAM_SVC.get_status(force_remote=force))
             return
 
+        # Runtime options in the prefix registry (shared with Raven's control panel)
+        if path == "/api/prefix/runtime-settings":
+            self.send_json(RUNTIME_SVC.read(query.get("prefix_id", [""])[0]))
+            return
+
         if path == "/api/inspect":
             prefix_id = query.get("prefix_id", ["default"])[0]
             exe_path = query.get("path", [""])[0]
@@ -147,12 +154,31 @@ class RavenAPIHandler(http.server.SimpleHTTPRequestHandler):
 
         # Container lifecycle endpoints
         if path == "/api/prefix/create":
-            self.send_json(CONTAINER_SVC.create_container(body))
+            res = CONTAINER_SVC.create_container(body)
+            res["runtime_migration"] = RUNTIME_SVC.migrate_env(res["prefix"]["id"])
+            res["prefix"] = CONTAINER_SVC.inspect_container(Path(res["prefix"]["path"]))
+            self.send_json(res)
             return
 
         if path == "/api/prefix/update":
             prefix_id = body.get("prefix_id", "")
-            self.send_json(CONTAINER_SVC.update_container(prefix_id, body))
+            res = CONTAINER_SVC.update_container(prefix_id, body)
+            if res.get("ok"):
+                res["runtime_migration"] = RUNTIME_SVC.migrate_env(prefix_id)
+                res["prefix"] = CONTAINER_SVC.inspect_container(Path(res["prefix"]["path"]))
+            self.send_json(res)
+            return
+
+        if path == "/api/prefix/runtime-settings":
+            self.send_json(RUNTIME_SVC.write(
+                body.get("prefix_id", ""),
+                body.get("values", {}),
+                replace=bool(body.get("replace", False)),
+            ))
+            return
+
+        if path == "/api/prefix/control-panel":
+            self.send_json(PROC_SVC.launch_control_panel(body.get("prefix_id", ""), body.get("page")))
             return
 
         if path == "/api/prefix/clone":

@@ -11,6 +11,8 @@
     "build_dir": "{repo_root}/build",
     "native_dir": "{build_dir}/native",
     "raven_bin": "{native_dir}/raven",
+    "reg_exe": "{native_dir}/reg.exe",
+    "control_exe": "{native_dir}/control.exe",
     "prefixes_root": "{home}/.local/share/raven",
     "trash_root": "{prefixes_root}/.trash",
     "user_config_file": "{home}/.config/raven-nest/config.json",
@@ -130,6 +132,21 @@
       "auto_deploy_redist": false
     }
   ],
+  "runtime_settings": {
+    "registry_key": "HKCU\\Software\\Raven\\Environment",
+    "registry_variables": [
+      "RAVEN_TRACE_API",
+      "RAVEN_TRACE_MSG",
+      "RAVEN_TRACE_FAIL",
+      "RAVEN_CONTINUE_UNIMPLEMENTED",
+      "RAVEN_SLICE_MS",
+      "RAVEN_COMMIT_LIMIT_MB"
+    ],
+    "reg_timeout_ms": 30000,
+    "control_panel_pages": ["system", "personalization", "apps", "raven"],
+    "control_panel_default_page": "raven",
+    "control_panel_timeout_ms": 3600000
+  },
   "snapshots": {
     "max_retained_auto": 10,
     "auto_snapshot_before_rollback": true,

@@ -15,6 +15,7 @@ from .container_service import ContainerService
 from .dependency_service import DependencyService
 from .doctor_service import DoctorService
 from .process_service import ProcessService
+from .runtime_settings_service import RuntimeSettingsService
 from .version_snapshot_service import VersionSnapshotService
 
 
@@ -654,7 +655,7 @@ def run_pipeline_cli() -> int:
     dep_svc = DependencyService(cfg)
     container_svc = ContainerService(cfg, dep_svc, ver_svc)
     doctor_svc = DoctorService(cfg)
-    proc_svc = ProcessService(cfg, container_svc, dep_svc, doctor_svc)
+    proc_svc = ProcessService(cfg, container_svc, dep_svc, doctor_svc, RuntimeSettingsService(cfg, container_svc))
     up_svc = UpstreamService(cfg, container_svc, dep_svc, ver_svc, doctor_svc, proc_svc)
 
     repo_root = cfg.path("repo_root")

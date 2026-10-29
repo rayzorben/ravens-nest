@@ -24,6 +24,46 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
+function parseKeyValueLines(text) {
+  const result = {};
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx > 0) {
+      result[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim();
+    }
+  }
+  return result;
+}
+
+function formatKeyValueLines(obj) {
+  return Object.entries(obj || {}).map(([k, v]) => `${k}=${v}`).join("\n");
+}
+
+async function loadRuntimeSettings(prefixId) {
+  const box = document.getElementById("cfg-runtime-options");
+  box.disabled = true;
+  const res = await apiGet(`/api/prefix/runtime-settings?prefix_id=${encodeURIComponent(prefixId)}`);
+  if (getSelectedPrefix()?.id !== prefixId) return;
+  box.disabled = false;
+  if (res.ok) {
+    document.getElementById("runtime-registry-key").textContent = res.registry_key;
+    box.value = formatKeyValueLines(res.values);
+  } else {
+    box.value = "";
+    showToast(res.error || "Could not read runtime options");
+  }
+}
+
+async function openControlPanel(page = null) {
+  const prefix = getSelectedPrefix();
+  if (!prefix) return;
+  const res = await apiPost("/api/prefix/control-panel", { prefix_id: prefix.id, page });
+  showToast(res.ok ? `Opening Raven control panel in ${prefix.display_name}...` : res.error || "Could not open the control panel");
+  if (res.ok) await refreshState();
+}
+
 function showToast(message) {
   const container = document.getElementById("toast-container");
   const el = document.createElement("div");
@@ -364,8 +404,8 @@ function renderContainerView(prefix) {
     document.getElementById("cfg-container-profile").value = prefix.profile;
     document.getElementById("cfg-container-desktop").value = prefix.desktop;
     document.getElementById("cfg-container-notes").value = prefix.notes || "";
-    const envLines = Object.entries(prefix.env || {}).map(([k, v]) => `${k}=${v}`);
-    document.getElementById("cfg-container-env").value = envLines.join("\n");
+    document.getElementById("cfg-container-env").value = formatKeyValueLines(prefix.env);
+    loadRuntimeSettings(prefix.id);
   }
 }
 
@@ -1134,15 +1174,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     e.preventDefault();
     const prefix = getSelectedPrefix();
     if (!prefix) return;
-    const envObj = {};
-    for (const line of document.getElementById("cfg-container-env").value.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const idx = trimmed.indexOf("=");
-      if (idx > 0) {
-        envObj[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim();
-      }
-    }
+    const envObj = parseKeyValueLines(document.getElementById("cfg-container-env").value);
     const res = await apiPost("/api/prefix/update", {
       prefix_id: prefix.id,
       display_name: document.getElementById("cfg-container-name").value.trim(),
@@ -1153,10 +1185,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     if (res.ok) {
       state.configFormHydratedForPrefix = null;
-      showToast("Saved container configuration & environment variables!");
+      const moved = res.runtime_migration?.migrated || [];
+      showToast(moved.length
+        ? `Saved. Moved ${moved.join(", ")} to the prefix registry.`
+        : "Saved container configuration & environment variables!");
+      if (res.runtime_migration && !res.runtime_migration.ok) showToast(res.runtime_migration.error);
       await refreshState();
+    } else {
+      showToast(res.error || "Could not save container configuration");
     }
   });
+
+  // Raven runtime options (prefix registry) & built-in control panel
+  document.getElementById("form-runtime-settings").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const prefix = getSelectedPrefix();
+    if (!prefix) return;
+    const res = await apiPost("/api/prefix/runtime-settings", {
+      prefix_id: prefix.id,
+      values: parseKeyValueLines(document.getElementById("cfg-runtime-options").value),
+      replace: true,
+    });
+    if (res.ok) {
+      document.getElementById("cfg-runtime-options").value = formatKeyValueLines(res.values);
+      showToast(res.changed.length ? `Updated ${res.changed.join(", ")} in the prefix registry.` : "Runtime options already up to date.");
+      await refreshState();
+    } else {
+      showToast(res.error || "Could not save runtime options");
+    }
+  });
+  document.getElementById("btn-runtime-reload").addEventListener("click", () => {
+    const prefix = getSelectedPrefix();
+    if (prefix) loadRuntimeSettings(prefix.id);
+  });
+  document.getElementById("btn-control-panel").addEventListener("click", () => openControlPanel());
+  document.getElementById("btn-runtime-control-panel").addEventListener("click", () => openControlPanel("raven"));
 
   // Versioned Snapshot Modal
   const dlgSnap = document.getElementById("dialog-new-snapshot");

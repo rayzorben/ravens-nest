@@ -14,6 +14,7 @@ from .config_service import ConfigService
 from .container_service import ContainerService
 from .dependency_service import DependencyService
 from .doctor_service import DoctorService
+from .runtime_settings_service import RuntimeSettingsService
 
 
 class ProcessService:
@@ -28,11 +29,13 @@ class ProcessService:
         container_service: ContainerService,
         dep_service: DependencyService,
         doctor_service: DoctorService,
+        runtime_service: RuntimeSettingsService,
     ) -> None:
         self.cfg = cfg
         self.containers = container_service
         self.dep = dep_service
         self.doctor = doctor_service
+        self.runtime = runtime_service
         self._lock = threading.Lock()
         self._processes: dict[str, dict[str, Any]] = {}
 
@@ -129,6 +132,19 @@ class ProcessService:
         threading.Thread(target=reader, daemon=True).start()
         return {"ok": True, "process_id": proc_id, "pid": proc.pid, "command": rec["command"]}
 
+    def _prefix_env(self, prefix_id: str, backtrace: bool = True) -> dict[str, str]:
+        """Host environment for a process in the container: its env, after moving runtime options to the registry."""
+        self.runtime.migrate_env(prefix_id)
+        prefix_path = self.cfg.path("prefixes_root") / prefix_id
+        meta = self.containers.load_meta(prefix_path)
+        env = os.environ.copy()
+        env["RAVEN_PREFIX"] = str(prefix_path)
+        for k, v in meta.get("env", {}).items():
+            env[str(k)] = str(v)
+        if backtrace:
+            env["RAVEN_BACKTRACE"] = "1"
+        return env
+
     def launch_application(self, payload: dict[str, Any]) -> dict[str, Any]:
         prefix_id = payload.get("prefix_id", "default")
         exe_path_str = payload.get("path", "")
@@ -139,7 +155,6 @@ class ProcessService:
         elevated = bool(payload.get("elevated", False))
         auto_deploy = bool(payload.get("auto_deploy", True))
 
-        prefix_path = self.cfg.path("prefixes_root") / prefix_id
         exe_path = Path(exe_path_str)
         if not exe_path.exists():
             return {"ok": False, "error": f"Executable not found: {exe_path_str}"}
@@ -175,13 +190,7 @@ class ProcessService:
                 cmd.append("--")
                 cmd.extend(shlex.split(args_str))
 
-        meta = self.containers.load_meta(prefix_path)
-        env = os.environ.copy()
-        env["RAVEN_PREFIX"] = str(prefix_path)
-        for k, v in meta.get("env", {}).items():
-            env[str(k)] = str(v)
-        if payload.get("backtrace", True):
-            env["RAVEN_BACKTRACE"] = "1"
+        env = self._prefix_env(prefix_id, bool(payload.get("backtrace", True)))
 
         return self._spawn_tracked(
             cmd=cmd,
@@ -191,6 +200,39 @@ class ProcessService:
             name=exe_path.name,
             path_str=str(exe_path),
             is_msi=is_msi,
+        )
+
+    def launch_control_panel(self, prefix_id: str, page: str | None = None) -> dict[str, Any]:
+        """Opens Raven's built-in control panel (control.exe) inside the container, on one of its pages."""
+        settings = self.cfg.data["runtime_settings"]
+        page = (page or settings.get("control_panel_default_page", "system")).lower()
+        if page not in settings.get("control_panel_pages", []):
+            return {"ok": False, "error": f"Unknown control panel page: {page}"}
+        prefix_path = self.cfg.path("prefixes_root") / prefix_id
+        if not prefix_id or not prefix_path.is_dir():
+            return {"ok": False, "error": f"Container '{prefix_id}' not found"}
+        control_exe = self.cfg.path("control_exe")
+        if not control_exe.exists():
+            return {"ok": False, "error": f"control.exe not found at {control_exe}; rebuild the Raven runtime"}
+
+        meta = self.containers.load_meta(prefix_path)
+        cmd = [
+            str(self.cfg.path("raven_bin")),
+            "--run-process",
+            "--execution=native",
+            f"--timeout-ms={int(settings.get('control_panel_timeout_ms', 3600000))}",
+            f"--desktop={meta.get('desktop', 'wayland')}",
+            str(control_exe),
+            "--",
+            page,
+        ]
+        return self._spawn_tracked(
+            cmd=cmd,
+            cwd=prefix_path,
+            env=self._prefix_env(prefix_id),
+            prefix_id=prefix_id,
+            name=f"Control Panel ({page})",
+            path_str=str(control_exe),
         )
 
     def kill_process(self, proc_id: str) -> dict[str, Any]:

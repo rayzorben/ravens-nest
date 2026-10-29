@@ -92,6 +92,9 @@
           <span class="badge" id="view-badge">PE64 / SysWOW64</span>
         </div>
         <div class="topbar-actions" id="container-top-actions">
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-control-panel" title="Open Raven's built-in control panel inside this container">
+            <span>⚙</span> Settings
+          </button>
           <button type="button" class="btn btn-sm btn-secondary" id="btn-clone-container" title="Clone or Fork Container">
             <span>⧉</span> Clone
           </button>
@@ -234,11 +237,33 @@
                 </label>
               </div>
               <label class="field-label">
-                <span>Environment Variables (One <code>KEY=VALUE</code> per line)</span>
+                <span>Environment Variables (One <code>KEY=VALUE</code> per line). Runtime options the control panel manages are moved to the prefix registry on save.</span>
                 <textarea id="cfg-container-env" class="input-textarea mono" rows="5" placeholder="RAVEN_BACKTRACE=1&#10;RAVEN_THEME=dark"></textarea>
               </label>
               <div class="settings-footer">
                 <button type="submit" class="btn btn-accent">Save Container Configuration</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div>
+                <h3>Raven Runtime Options (Prefix Registry)</h3>
+                <p class="muted">Kept under <code id="runtime-registry-key">HKCU\Software\Raven\Environment</code>, the same values Raven's control panel edits. They apply to every program started in this container afterwards, desktop runners included.</p>
+              </div>
+              <div class="header-btn-group">
+                <button type="button" class="btn btn-sm btn-secondary" id="btn-runtime-reload">Reload</button>
+                <button type="button" class="btn btn-sm btn-secondary" id="btn-runtime-control-panel">⚙ Open in Control Panel</button>
+              </div>
+            </div>
+            <form id="form-runtime-settings" class="settings-form">
+              <label class="field-label">
+                <span>Runtime Options (One <code>RAVEN_*=VALUE</code> per line; removing a line removes the option)</span>
+                <textarea id="cfg-runtime-options" class="input-textarea mono" rows="5" placeholder="RAVEN_TRACE_FAIL=1&#10;RAVEN_COMMIT_LIMIT_MB=2048"></textarea>
+              </label>
+              <div class="settings-footer">
+                <button type="submit" class="btn btn-accent">Save to Prefix Registry</button>
               </div>
             </form>
           </div>

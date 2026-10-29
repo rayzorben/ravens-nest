@@ -159,6 +159,7 @@ class ConfigService:
             "desktop_backends": self._merged["desktop_backends"],
             "blueprints": self._merged["blueprints"],
             "snapshots": self._merged["snapshots"],
+            "runtime_settings": self._merged.get("runtime_settings", {}),
             "user_config_path": str(self.user_config_path),
             "default_config_path": str(self.default_config_path),
             "user_overrides": self._user_overrides,

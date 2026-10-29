@@ -29,6 +29,7 @@
    - **Clone & Fork**: Duplicate any container from its live state or fork a brand-new container from any historical snapshot.
    - **Safe Deletion & Recovery**: Move containers to a recoverable Trash archive (`~/.local/share/raven/.trash/`) with full snapshot preservation, or permanently delete them.
    - **Per-Container Environment & Config**: Customize display backend (`wayland` / `x11`), blueprint metadata, notes, and environment variables (`RAVEN_BACKTRACE`, `RAVEN_THEME`, etc.).
+   - **Raven Control Panel Integration**: A per-container **Settings** button opens Raven's built-in control panel (`control.exe`) inside the prefix. Runtime options it manages (`RAVEN_TRACE_*`, `RAVEN_CONTINUE_UNIMPLEMENTED`, `RAVEN_SLICE_MS`, `RAVEN_COMMIT_LIMIT_MB`) live in the prefix registry under `HKCU\Software\Raven\Environment`, read and written through the prefix's `reg.exe`; copies found in a container's env are moved there so they no longer override the control panel.
 
 2. **Versioning, Snapshotting & Non-Destructive Rollback**
    - Every container tracks sequential versions (`v1`, `v2`, `v3`...) fingerprinted by the SHA-256 digest of `registry.dat`.
@@ -64,7 +65,8 @@ Raven Nest strictly adheres to five engineering principles (recorded in [`AGENTS
   - [`version_snapshot_service.py`](services/version_snapshot_service.py) — Versioned snapshot ledger, registry SHA-256 fingerprinting, rollback, and pruning.
   - [`dependency_service.py`](services/dependency_service.py) — PE64/PE32 & MSI inspection and idempotent library deployment.
   - [`doctor_service.py`](services/doctor_service.py) — Build/runtime health checks and CMake diagnostics.
-  - [`process_service.py`](services/process_service.py) — Process execution, live stdout/stderr streaming, diagnostic pattern translation, and `.desktop` export.
+  - [`process_service.py`](services/process_service.py) — Process execution, live stdout/stderr streaming, diagnostic pattern translation, control panel launch, and `.desktop` export.
+  - [`runtime_settings_service.py`](services/runtime_settings_service.py) — Raven runtime options in the prefix registry (shared with Raven's control panel) via `reg.exe`, and their migration out of container env.
 - **Idempotence**: Every file deployment, container creation, snapshot operation, and configuration update verifies state first so repeated runs converge without side effects.
 - **Everything as Config (No Hard-Coded Options)**: All paths, ports, timeouts, blueprints, DLL mappings, redistributable families, doctor checks, and diagnostic rules live in [`config/default.json`](config/default.json) with user overrides in `~/.config/raven-nest/config.json`.
 
